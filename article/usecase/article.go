@@ -11,7 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type IArticleUsecase interface {
+type ArticleUsecase interface {
 	Fetch(cursor string, num int64) ([]*article.Article, string, error)
 	GetByID(id int64) (*article.Article, error)
 	Update(ar *article.Article) (*article.Article, error)
@@ -20,9 +20,9 @@ type IArticleUsecase interface {
 	Delete(id int64) (bool, error)
 }
 
-var _ IArticleUsecase = &ArticleUsecase{}
+var _ ArticleUsecase = &articleUsecase{}
 
-type ArticleUsecase struct {
+type articleUsecase struct {
 	articleRepo repoArticle.ArticleRepository
 	authorRepo  repoAuthor.AuthorRepository
 }
@@ -32,14 +32,14 @@ type AuthorChannel struct {
 	Error  error
 }
 
-func NewArticleUsecase(article repoArticle.ArticleRepository, author repoAuthor.AuthorRepository) IArticleUsecase {
-	return &ArticleUsecase{
+func NewArticleUsecase(article repoArticle.ArticleRepository, author repoAuthor.AuthorRepository) ArticleUsecase {
+	return &articleUsecase{
 		articleRepo: article,
 		authorRepo:  author,
 	}
 }
 
-func (a *ArticleUsecase) getAuthorDetail(item *article.Article, ch chan AuthorChannel) {
+func (a *articleUsecase) getAuthorDetail(item *article.Article, ch chan AuthorChannel) {
 	defer func() {
 		if r := recover(); r != nil {
 			logrus.Debug("Recovered in ", r)
@@ -54,7 +54,7 @@ func (a *ArticleUsecase) getAuthorDetail(item *article.Article, ch chan AuthorCh
 	ch <- holder
 }
 
-func (a *ArticleUsecase) getAuthorDetails(data []*article.Article) ([]*article.Article, error) {
+func (a *articleUsecase) getAuthorDetails(data []*article.Article) ([]*article.Article, error) {
 	ch := make(chan AuthorChannel)
 	defer close(ch)
 	existingAuthorMap := make(map[int64]bool)
@@ -68,8 +68,8 @@ func (a *ArticleUsecase) getAuthorDetails(data []*article.Article) ([]*article.A
 	}
 
 	mapAuthor := make(map[int64]*author.Author)
-	totalGorutineCalled := len(existingAuthorMap)
-	for i := 0; i < totalGorutineCalled; i++ {
+	totalRoutineCalled := len(existingAuthorMap)
+	for i := 0; i < totalRoutineCalled; i++ {
 		select {
 		case a := <-ch:
 			if a.Error == nil && a.Author != nil {
@@ -89,7 +89,7 @@ func (a *ArticleUsecase) getAuthorDetails(data []*article.Article) ([]*article.A
 	return data, nil
 }
 
-func (a *ArticleUsecase) Fetch(cursor string, num int64) ([]*article.Article, string, error) {
+func (a *articleUsecase) Fetch(cursor string, num int64) ([]*article.Article, string, error) {
 	if num == 0 {
 		num = 10
 	}
@@ -114,7 +114,7 @@ func (a *ArticleUsecase) Fetch(cursor string, num int64) ([]*article.Article, st
 	return listArticle, nextCursor, nil
 }
 
-func (a *ArticleUsecase) GetByID(id int64) (*article.Article, error) {
+func (a *articleUsecase) GetByID(id int64) (*article.Article, error) {
 	res, err := a.articleRepo.GetByID(id)
 	if err != nil {
 		return nil, err
@@ -129,12 +129,12 @@ func (a *ArticleUsecase) GetByID(id int64) (*article.Article, error) {
 	return res, nil
 }
 
-func (a *ArticleUsecase) Update(ar *article.Article) (*article.Article, error) {
+func (a *articleUsecase) Update(ar *article.Article) (*article.Article, error) {
 	ar.UpdatedAt = time.Now()
 	return a.articleRepo.Update(ar)
 }
 
-func (a *ArticleUsecase) GetByTitle(title string) (*article.Article, error) {
+func (a *articleUsecase) GetByTitle(title string) (*article.Article, error) {
 	res, err := a.articleRepo.GetByTitle(title)
 	if err != nil {
 		return nil, err
@@ -149,7 +149,7 @@ func (a *ArticleUsecase) GetByTitle(title string) (*article.Article, error) {
 	return res, nil
 }
 
-func (a *ArticleUsecase) Store(ar *article.Article) (*article.Article, error) {
+func (a *articleUsecase) Store(ar *article.Article) (*article.Article, error) {
 	existedArticle, _ := a.GetByTitle(ar.Title)
 	if existedArticle != nil {
 		return nil, article.ErrAlreadyExist
@@ -164,7 +164,7 @@ func (a *ArticleUsecase) Store(ar *article.Article) (*article.Article, error) {
 	return ar, nil
 }
 
-func (a *ArticleUsecase) Delete(id int64) (bool, error) {
+func (a *articleUsecase) Delete(id int64) (bool, error) {
 	existedArticle, _ := a.articleRepo.GetByID(id)
 	if existedArticle == nil {
 		return false, article.ErrNotFound
