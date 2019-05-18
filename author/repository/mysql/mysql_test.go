@@ -1,14 +1,14 @@
-package repository_test
+package mysql_test
 
 import (
+	"context"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/phantomnat/go-clean-architecture/author/repository/mysql"
 
 	"github.com/DATA-DOG/go-sqlmock"
-
-	"github.com/phantomnat/go-clean-architecture/author/repository"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGetByID(t *testing.T) {
@@ -16,7 +16,7 @@ func TestGetByID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("an error '%v' was not expected when opening a stub database connection", err)
 	}
-	defer db.Close()
+
 	rows := sqlmock.NewRows([]string{"id", "name", "updated_at", "created_at"}).
 		AddRow(1, "Iron Man", time.Now(), time.Now())
 
@@ -26,9 +26,10 @@ func TestGetByID(t *testing.T) {
 	userID := int64(1)
 	prep.ExpectQuery().WithArgs(userID).WillReturnRows(rows)
 
-	a := repository.NewMysqlAuthorRepository(db)
+	a := mysql.NewMysqlAuthorRepository(db)
 
-	anArticle, err := a.GetByID(userID)
+	anArticle, err := a.GetByID(context.TODO(), userID)
 	assert.NoError(t, err)
 	assert.NotNil(t, anArticle)
+	assert.Equal(t, anArticle.ID, userID)
 }
